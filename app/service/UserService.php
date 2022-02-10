@@ -27,16 +27,27 @@ class UserService
 {
     // user登录session key
     public static $user_login_key = 'user_login_info';
+    public static $user_token_key = 'user_token_data';
 
     /**
-     * 获取用户登录信息
+     * 
      * @author   Devil
      * @blog    http://gong.gg/
      * @version 1.0.0
      * @date    2019-02-27
      * @desc    description
      */
-    public static function LoginUserInfo()
+    
+    /**
+     * 获取用户登录信息
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-12-06
+     * @desc    description
+     * @param   [boolean]         $is_cache [是否缓存读取]
+     */
+    public static function LoginUserInfo($is_cache = true)
     {
         // 静态数据避免重复读取
         static $user_login_info = null;
@@ -52,12 +63,16 @@ class UserService
                 $user_login_info = MySession(self::$user_login_key);
 
                 // 用户信息为空，指定了token则设置登录信息
-                if(empty($user_login_info) && !empty($params['token']))
+                if(empty($user_login_info))
                 {
-                    $user_login_info = self::UserTokenData($params['token']);
-                    if($user_login_info !== null && isset($user_login_info['id']))
+                    $token = empty($params['token']) ? MySession(self::$user_token_key) : $params['token'];
+                    if(!empty($token))
                     {
-                        self::UserLoginRecord($user_login_info['id']);
+                        $user_login_info = self::UserTokenData($token);
+                        if($user_login_info !== null && isset($user_login_info['id']))
+                        {
+                            self::UserLoginRecord($user_login_info['id']);
+                        }
                     }
                 }
             } else {
@@ -67,6 +82,23 @@ class UserService
                 }
             }
         }
+
+        // 是否缓存读取
+        if(!empty($user_login_info) && !$is_cache)
+        {
+            // 根据用户id从数据库获取信息并处理
+            $user_login_info = self::UserHandle(self::UserInfo('id', $user_login_info['id']));
+            if(!empty($user_login_info))
+            {
+                // 重新更新用户缓存
+                self::UserLoginRecord($user_login_info['id']);
+                if(!empty($user_login_info['token']))
+                {
+                    MyCache(MyConfig('shopxo.cache_user_info').$user_login_info['token'], $user_login_info);
+                }
+            }
+        }
+
         return $user_login_info;
     }
 
@@ -487,59 +519,65 @@ class UserService
      */
     public static function UserHandle($user)
     {
-        // 基础数据处理
-        if(isset($user['add_time']))
+        if(!empty($user))
         {
-            $user['add_time_text']  =   date('Y-m-d H:i:s', $user['add_time']);
-        }
-        if(isset($user['upd_time']))
-        {
-            $user['upd_time_text']  =   date('Y-m-d H:i:s', $user['upd_time']);
-        }
-        if(isset($user['gender']))
-        {
-            $user['gender_text']    =   MyConst('common_gender_list')[$user['gender']]['name'];
-        }
-        if(isset($user['birthday']))
-        {
-            $user['birthday_text']  =   empty($user['birthday']) ? '' : date('Y-m-d', $user['birthday']);
-        }
+            // 基础数据处理
+            if(isset($user['add_time']))
+            {
+                $user['add_time_text']  =   date('Y-m-d H:i:s', $user['add_time']);
+            }
+            if(isset($user['upd_time']))
+            {
+                $user['upd_time_text']  =   date('Y-m-d H:i:s', $user['upd_time']);
+            }
+            if(isset($user['gender']))
+            {
+                $user['gender_text']    =   MyConst('common_gender_list')[$user['gender']]['name'];
+            }
+            if(isset($user['birthday']))
+            {
+                $user['birthday_text']  =   empty($user['birthday']) ? '' : date('Y-m-d', $user['birthday']);
+            }
 
-        // 邮箱/手机
-        if(isset($user['mobile']))
-        {
-            $user['mobile_security']=   empty($user['mobile']) ? '' : mb_substr($user['mobile'], 0, 3, 'utf-8').'***'.mb_substr($user['mobile'], -3, null, 'utf-8');
-        }
-        if(isset($user['email']))
-        {
-            $user['email_security'] =   empty($user['email']) ? '' : mb_substr($user['email'], 0, 3, 'utf-8').'***'.mb_substr($user['email'], -3, null, 'utf-8');
-        }
+            // 邮箱/手机
+            if(isset($user['mobile']))
+            {
+                $user['mobile_security']=   empty($user['mobile']) ? '' : mb_substr($user['mobile'], 0, 3, 'utf-8').'***'.mb_substr($user['mobile'], -3, null, 'utf-8');
+            }
+            if(isset($user['email']))
+            {
+                $user['email_security'] =   empty($user['email']) ? '' : mb_substr($user['email'], 0, 3, 'utf-8').'***'.mb_substr($user['email'], -3, null, 'utf-8');
+            }
 
-        // 显示名称,根据规则优先展示
-        $user['user_name_view'] = isset($user['username']) ? $user['username'] : '';
-        if(empty($user['user_name_view']) && isset($user['nickname']))
-        {
-            $user['user_name_view'] = $user['nickname'];
-        }
-        if(empty($user['user_name_view']) && isset($user['mobile_security']))
-        {
-            $user['user_name_view'] = $user['mobile_security'];
-        }
-        if(empty($user['user_name_view']) && isset($user['email_security']))
-        {
-            $user['user_name_view'] = $user['email_security'];
-        }
+            // 显示名称,根据规则优先展示
+            $user['user_name_view'] = isset($user['username']) ? $user['username'] : '';
+            if(empty($user['user_name_view']) && isset($user['nickname']))
+            {
+                $user['user_name_view'] = $user['nickname'];
+            }
+            if(empty($user['user_name_view']) && isset($user['mobile_security']))
+            {
+                $user['user_name_view'] = $user['mobile_security'];
+            }
+            if(empty($user['user_name_view']) && isset($user['email_security']))
+            {
+                $user['user_name_view'] = $user['email_security'];
+            }
 
-        // 头像
-        if(!empty($user['avatar']))
-        {
-            $user['avatar'] = ResourcesService::AttachmentPathViewHandle($user['avatar']);
-        } else {
-            $user['avatar'] = SystemBaseService::AttachmentHost().'/static/index/'.strtolower(MyFileConfig('common_default_theme', '', 'default', true)).'/images/default-user-avatar.jpg';
-        }
+            // 头像
+            if(isset($user['avatar']))
+            {
+                if(!empty($user['avatar']))
+                {
+                    $user['avatar'] = ResourcesService::AttachmentPathViewHandle($user['avatar']);
+                } else {
+                    $user['avatar'] = SystemBaseService::AttachmentHost().'/static/index/'.strtolower(MyFileConfig('common_default_theme', '', 'default', true)).'/images/default-user-avatar.jpg';
+                }
+            }
 
-        // 移除特殊数据
-        unset($user['pwd'], $user['salt']);
+            // 移除特殊数据
+            unset($user['pwd'], $user['salt']);
+        }
 
         return $user;
     }
@@ -766,7 +804,7 @@ class UserService
 
         // 获取用户账户信息
         $where = [$ac['data'] => $params['accounts'], 'is_delete_time'=>0];
-        $user = Db::name('User')->field('id,pwd,salt,status')->where($where)->find();
+        $user = Db::name('User')->where($where)->find();
         if(empty($user))
         {
             return DataReturn('帐号不存在', -3);
@@ -804,14 +842,38 @@ class UserService
 
         // 返回数据,更新数据库
         $data = [
-                'upd_time'  =>  time(),
-            ];
+            'upd_time'  =>  time(),
+        ];
         if($params['type'] == 'username')
         {
             $salt = GetNumberCode(6);
             $data['salt'] = $salt;
             $data['pwd'] = LoginPwdEncryption($params['pwd'], $salt);
         }
+
+        // 用户openid
+        if(empty($user[APPLICATION_CLIENT_TYPE.'_openid']))
+        {
+            $openid = self::UserOpenidHandle($params);
+            if(!empty($openid['field']) && !empty($openid['value']))
+            {
+                // openid放入用户data中
+                $data[$openid['field']] = $openid['value'];
+            }
+        }
+
+        // 用户unionid
+        if(empty($user[APPLICATION_CLIENT_TYPE.'_unionid']))
+        {
+            $unionid = self::UserUnionidHandle($params);
+            if(!empty($unionid['field']) && !empty($unionid['value']))
+            {
+                // unionid放入用户data中
+                $data[$unionid['field']] = $unionid['value'];
+            }
+        }
+
+        // 更新用户信息
         if(Db::name('User')->where(['id'=>$user['id']])->update($data) !== false)
         {
             // 清除图片验证码
@@ -1230,7 +1292,7 @@ class UserService
             return DataReturn($ret, -1);
         }
 
-        // 是否开启用户注册
+        // 是否开启用户登录
         if(!in_array($params['type'], MyC('home_user_login_type', [], true)))
         {
             return DataReturn('暂时关闭登录', -1);
@@ -1335,7 +1397,7 @@ class UserService
         // 是否开启用户注册
         if(!in_array($params['type'], MyC('home_user_reg_type', [], true)))
         {
-            return DataReturn('暂时关闭用户注册');
+            return DataReturn('暂时关闭用户注册', -1);
         }
 
         // 验证码基础参数
@@ -1858,6 +1920,33 @@ class UserService
     }
 
     /**
+     * 用户openid处理
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2020-02-11
+     * @desc    description
+     * @param   [array]          $params [输入参数]
+     */
+    public static function UserOpenidHandle($params = [])
+    {
+        $field = null;
+        $value = null;
+        $fields_arr = array_column(MyConst('common_appmini_type'), 'value');
+        foreach($fields_arr as $type)
+        {
+            $openid = $type.'_openid';
+            if(!empty($params[$openid]))
+            {
+                $field = $openid;
+                $value = $params[$openid];
+                break;
+            }
+        }
+        return ['field'=>$field, 'value'=>$value];
+    }
+
+    /**
      * 用户unionid处理
      * @author  Devil
      * @blog    http://gong.gg/
@@ -1873,8 +1962,8 @@ class UserService
         // QQ用户unionid
         $field = null;
         $value = null;
-        $unionid_all = ['weixin_unionid', 'qq_unionid'];
-        foreach($unionid_all as $unionid)
+        $fields_arr = ['weixin_unionid', 'qq_unionid'];
+        foreach($fields_arr as $unionid)
         {
             if(!empty($params[$unionid]))
             {
@@ -2039,6 +2128,17 @@ class UserService
             return DataReturn('账号已存在', -10);
         }
 
+        // 用户基础信息处理
+        $data = self::UserBaseHandle($data, $params);
+
+        // 用户openid
+        $openid = self::UserOpenidHandle($params);
+        if(!empty($openid['field']) && !empty($openid['value']))
+        {
+            // openid放入用户data中
+            $data[$openid['field']] = $openid['value'];
+        }
+
         // 用户unionid
         $unionid = self::UserUnionidHandle($params);
         if(!empty($unionid['field']) && !empty($unionid['value']))
@@ -2089,6 +2189,68 @@ class UserService
             return DataReturn('添加成功', 0, $result);
         }
         return DataReturn('添加失败', -100);
+    }
+
+    /**
+     * 用户基础信息处理、注册绑定的时候处理外部传入的基础信息
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-11-13
+     * @desc    description
+     * @param   [array]          $data   [用户信息]
+     * @param   [array]          $params [输入参数]
+     */
+    public static function UserBaseHandle($data, $params)
+    {
+        if(!empty($params) && is_array($params))
+        {
+            // 是否存在基信息
+            // 参数key => dbkey
+            $base_fields = [
+                'nickname'      => [
+                    'key'   => 'nickname',
+                    'type'  => 'string'
+                ],
+                'avatar'        => [
+                    'key'   => 'avatar',
+                    'type'  => 'url'
+                ],
+                'province'      => [
+                    'key'   => 'province',
+                    'type'  => 'string'
+                ],
+                'city'          => [
+                    'key'   => 'city',
+                    'type'  => 'string'
+                ],
+                'gender'        => [
+                    'key'   => 'gender',
+                    'type'  => 'int',
+                    'isset' => 1
+                ],
+            ];
+            foreach($base_fields as $k=>$v)
+            {
+                if(!empty($params[$k]) || (isset($v['isset']) && isset($params[$k])))
+                {
+                    switch($v['type'])
+                    {
+                        // url处理
+                        case 'url' :
+                            $params[$k] = str_replace(['&amp;'], ['&'], $params[$k]);
+                            break;
+
+                        // 整数
+                        case 'int' :
+                            $params[$k] = intval($params[$k]);
+                            break;
+                    }
+                    $data[$v['key']] = $params[$k];
+                }
+            }
+        }
+        return $data;
     }
 
     /**
@@ -2210,46 +2372,36 @@ class UserService
             $data[$accounts_field] = $params[$accounts_field];
 
             // 小程序请求获取用户信息
-            $open_user = Db::name('User')->where([
+            $current_user = Db::name('User')->where([
                 [$accounts_field, '=', $params[$accounts_field]],
                 ['is_delete_time', '=', 0],
             ])->find();
+        } else {
+            // 当前登录用户
+            $current_user = self::LoginUserInfo();
+        }
 
-            // 如果手机号码存在，并且openid也已存在，则更新掉之前的openid
+        // 用户是否存在已登录
+        if(!empty($current_user))
+        {
+            // 手机帐号信息是否存在
             if(!empty($mobile_user))
             {
-                if(!empty($open_user))
+                // id不一致则提示错误
+                if($current_user['id'] != $mobile_user['id'])
                 {
-                    Db::name('User')->where(['id'=>$open_user['id']])->update([$accounts_field=>'', 'upd_time'=>time()]);
-                }
-            } else {
-                $mobile_user = $open_user;
-            }
-        } else {
-            // 获取当前登录用户
-            // 如果手机号码已经存在帐号、当前用户已登录
-            $user = self::LoginUserInfo();
-            if(!empty($user))
-            {
-                // 手机帐号信息是否存在
-                if(!empty($mobile_user))
-                {
-                    // id不一致则提示错误
-                    if($user['id'] != $mobile_user['id'])
-                    {
-                        return DataReturn('手机已绑定、请换手机号重试', -50);
-                    }
-                    
-                    // 是否与当前帐号的手机号码一致
-                    if(!empty($user['mobile']) && $user['mobile'] == $mobile_user['mobile'])
-                    {
-                        return DataReturn('请使用新的手机号', -51);
-                    }
+                    return DataReturn('手机已绑定其他账号、请换手机号重试', -50);
                 }
 
-                // 当前用户赋值手机帐号信息
-                $mobile_user = $user;
+                // 是否与当前帐号的手机号码一致
+                if(!empty($current_user['mobile']) && $current_user['mobile'] == $mobile_user['mobile'])
+                {
+                    return DataReturn('请使用新的手机号', -51);
+                }
             }
+
+            // 当前用户赋值手机帐号信息
+            $mobile_user = $current_user;
         }
 
         // 不存在添加/则更新
@@ -2350,6 +2502,40 @@ class UserService
             return DataReturn('发送成功', 0);
         }
         return DataReturn('发送失败'.'['.$obj->error.']', -100);
+    }
+
+    /**
+     * 根据token获取用户信息
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-12-06
+     * @desc    description
+     * @param   [array]           $params [输入参数]
+     */
+    public static function TokenUserinfo($params = [])
+    {
+        // 数据验证
+        $p = [
+            [
+                'checked_type'      => 'empty',
+                'key_name'          => 'token',
+                'error_msg'         => 'token不能为空',
+            ],
+        ];
+        $ret = ParamsChecked($params, $p);
+        if($ret !== true)
+        {
+            return DataReturn($ret, -1);
+        }
+
+        // 获取用户信息并处理
+        $user = self::UserHandle(self::UserInfo('token', $params['token']));
+        if(empty($user))
+        {
+            return DataReturn('用户信息不存在', -1);
+        }
+        return DataReturn('success', 0, $user);
     }
 
     /**

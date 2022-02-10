@@ -50,7 +50,7 @@ class QQ
         // 基础信息
         $base = [
             'name'          => 'QQ支付',  // 插件名称
-            'version'       => '1.0.0',  // 插件版本
+            'version'       => '1.0.1',  // 插件版本
             'apply_version' => '不限',  // 适用系统版本描述
             'apply_terminal'=> ['pc', 'h5', 'qq', 'ios', 'android'], // 适用终端 默认全部 ['pc', 'h5', 'app', 'alipay', 'weixin', 'baidu']
             'desc'          => '适用PC+H5+APP+QQ小程序，即时到帐支付方式，买家的交易资金直接打入卖家账户，快速回笼交易资金。 <a href="https://qpay.qq.com/" target="_blank">立即申请</a>',  // 插件描述（支持html）
@@ -227,23 +227,35 @@ class QQ
                 // 手机模式下直接返回微信的支付url地址，打开支付（缺点是支付后会直接关闭站点）
                 // QQ支付本身没有提供H5支付方案，这种方式也可以直接支付（缺点是支付后不能回调到原来浏览器）
                 // 公众号后续再采用公众号的方式支付，体验会更好一些，只是可以不关闭站点
-                if(ApplicationClientType() == 'h5')
+                if(APPLICATION == 'web' && IsMobile())
                 {
                     $result = DataReturn('success', 0, $data['code_url']);
                 } else {
-                    if(empty($params['ajax_url']))
+                    if(empty($params['check_url']))
                     {
                         return DataReturn('支付状态校验地址不能为空', -50);
                     }
-                    $pay_params = [
-                        'url'       => urlencode(base64_encode($data['code_url'])),
-                        'order_no'  => $params['order_no'],
-                        'name'      => urlencode('QQ支付'),
-                        'msg'       => urlencode('打开QQAPP扫一扫进行支付'),
-                        'ajax_url'  => urlencode(base64_encode($params['ajax_url'])),
-                    ];
-                    $url = MyUrl('index/pay/qrcode', $pay_params);
-                    $result = DataReturn('success', 0, $url);
+                    if(APPLICATION == 'app')
+                    {
+                        $data = [
+                            'pay_url'       => $data['code_url'],
+                            'qrcode_url'    => MyUrl('index/qrcode/index', ['content'=>urlencode(base64_encode($data['code_url']))]),
+                            'order_no'      => $params['order_no'],
+                            'name'          => 'QQ支付',
+                            'msg'           => '打开QQAPP扫一扫进行支付',
+                            'check_url'     => $params['check_url'],
+                        ];
+                    } else {
+                        $pay_params = [
+                            'url'       => urlencode(base64_encode($data['code_url'])),
+                            'order_no'  => $params['order_no'],
+                            'name'      => urlencode('QQ支付'),
+                            'msg'       => urlencode('打开QQAPP扫一扫进行支付'),
+                            'check_url' => urlencode(base64_encode($params['check_url'])),
+                        ];
+                        $data = MyUrl('index/pay/qrcode', $pay_params);
+                    }
+                    $result = DataReturn('success', 0, $data);
                 }
                 break;
 
@@ -286,7 +298,11 @@ class QQ
     private function GetPayParams($params = [])
     {
         // 平台
-        $client_type = ApplicationClientType();
+        $client_type = APPLICATION_CLIENT_TYPE;
+        if($client_type == 'pc' && IsMobile())
+        {
+            $client_type = 'h5';
+        }
 
         // 支付类型
         $trade_type = empty($params['trade_type']) ? $this->GetTradeType($client_type) : $params['trade_type'];

@@ -382,32 +382,108 @@ class GoodsService
      * @version 1.0.0
      * @date    2018-08-29
      * @desc    description
-     * @param   [array]          $ids       [分类id数组]
-     * @param   [int]            $is_enable [是否启用 null, 0否, 1是]
-     * @param   [string]         $order_by  [排序, 默认sort asc]
+     * @param   [array]         $ids       [分类id数组]
+     * @param   [int]           $is_enable [是否启用 null, 0否, 1是]
+     * @param   [int]           $level     [指定级别 null, 整数、默认则全部下级]
      */
-    public static function GoodsCategoryItemsIds($ids = [], $is_enable = null, $order_by = 'sort asc')
+    public static function GoodsCategoryItemsIds($ids = [], $is_enable = null, $level = null)
     {
         if(!is_array($ids))
         {
             $ids = explode(',', $ids);
         }
-        $where = ['pid'=>$ids];
+        $where = [
+            ['pid', 'in', $ids],
+        ];
         if($is_enable !== null)
         {
-            $where['is_enable'] = $is_enable;
+            $where[] = ['is_enable', '=', $is_enable];
         }
-        $data = Db::name('GoodsCategory')->where($where)->order($order_by)->column('id');
-        if(!empty($data))
+
+        // 级别记录处理
+        if($level !== null)
         {
-            $temp = self::GoodsCategoryItemsIds($data, $is_enable, $order_by);
-            if(!empty($temp))
+            if(is_array($level))
             {
-                $data = array_merge($data, $temp);
+                $level['temp'] += 1;
+            } else {
+                $level = [
+                    'value' => $level,
+                    'temp'  => 1,
+                ];
             }
         }
-        $data = empty($data) ? $ids : array_unique(array_merge($ids, $data));
-        return $data;
+
+        // 是否超过级别限制
+        if($level === null || $level['temp'] < $level['value'])
+        {
+            $data = Db::name('GoodsCategory')->where($where)->column('id');
+            if(!empty($data))
+            {
+                $temp = self::GoodsCategoryItemsIds($data, $is_enable, $level);
+                if(!empty($temp))
+                {
+                    $data = array_merge($data, $temp);
+                }
+            }
+        }
+        return empty($data) ? $ids : array_unique(array_merge($ids, $data));
+    }
+
+    /**
+     * 获取商品分类的所有上级分类id
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-08-29
+     * @desc    description
+     * @param   [array]         $ids       [分类id数组]
+     * @param   [int]           $is_enable [是否启用 null, 0否, 1是]
+     * @param   [int]           $level     [指定级别 null, 整数、默认则全部下级]
+     */
+    public static function GoodsCategoryParentIds($ids = [], $is_enable = null, $level = null)
+    {
+        if(!is_array($ids))
+        {
+            $ids = explode(',', $ids);
+        }
+        $where = [
+            ['id', 'in', $ids],
+            ['pid', '>', 0],
+        ];
+        if($is_enable !== null)
+        {
+            $where[] = ['is_enable', '=', $is_enable];
+        }
+
+        // 级别记录处理
+        if($level !== null)
+        {
+            if(is_array($level))
+            {
+                $level['temp'] += 1;
+            } else {
+                $level = [
+                    'value' => $level,
+                    'temp'  => 1,
+                ];
+            }
+        }
+
+        // 是否超过级别限制
+        if($level === null || $level['temp'] < $level['value'])
+        {
+            $data = Db::name('GoodsCategory')->where($where)->column('pid');
+            if(!empty($data))
+            {
+                $temp = self::GoodsCategoryParentIds($data, $is_enable, $level);
+                if(!empty($temp))
+                {
+                    $data = array_merge($data, $temp);
+                }
+            }
+        }
+        return empty($data) ? $ids : array_unique(array_merge($ids, $data));
     }
 
     /**

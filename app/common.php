@@ -12,6 +12,25 @@
 // 应用公共文件
 
 /**
+ * 生成uuid
+ * @author  Devil
+ * @blog    http://gong.gg/
+ * @version 1.0.0
+ * @date    2021-10-30
+ * @desc    description
+ */
+function UUId()  
+{  
+    $chars = md5(uniqid(mt_rand(), true));
+    $uuid = substr($chars, 0, 8) . '-'
+            . substr($chars, 8, 4) . '-' 
+            . substr($chars, 12, 4) . '-'
+            . substr($chars, 16, 4) . '-'
+            . substr($chars, 20, 12);
+    return $uuid;
+}  
+
+/**
  * 获取常量数据
  * @author  Devil
  * @blog    http://gong.gg/
@@ -39,6 +58,21 @@ function MyConst($key = '', $default = null)
 function MySession($name = '', $value = '')
 {
     return session($name, $value);
+}
+
+/**
+ * cookie管理
+ * @author  Devil
+ * @blog    http://gong.gg/
+ * @version 1.0.0
+ * @date    2021-07-17
+ * @desc    description
+ * @param   [string]         $name    [cookie名称]
+ * @param   [mixed]          $value   [cookie值]
+ */
+function MyCookie($name = '', $value = '')
+{
+    return cookie($name, $value);
 }
 
 /**
@@ -1152,7 +1186,6 @@ function HexToRgb($hex_color) {
             'b' => hexdec(substr($color, 4, 2))
         ];
     } else {
-        $color = $hex_color;
         $r = substr($color, 0, 1) . substr($color, 0, 1);
         $g = substr($color, 1, 1) . substr($color, 1, 1);
         $b = substr($color, 2, 1) . substr($color, 2, 1);
@@ -1560,7 +1593,8 @@ function MyUrl($path, $params = [])
     $url = (string) $url;
 
     // 去除组名称
-    $join = ($script_name != 'index.php' || $url_model == 0) ? '?s=' : '/';
+    $ds = ($script_name == 'index.php') ? '/' : '';
+    $join = ($script_name != 'index.php' || $url_model == 0) ? $ds.'?s=' : '/';
     $len = $is_api ? 4 : ($is_install ? 8 : 6);
     $url = str_replace('/'.$path, $join.substr($path, $len), $url);
 
@@ -2116,7 +2150,7 @@ function CurlPost($url, $post, $is_json = false, $timeout = 30)
  */
 function FsockopenPost($url, $data = '')
 {
-    $row = parse_MyUrl($url);
+    $row = parse_url($url);
     $host = $row['host'];
     $port = isset($row['port']) ? $row['port'] : 80;
     $file = $row['path'];
@@ -2613,9 +2647,13 @@ function ParamsChecked($data, $params)
 
             // 是否存在于验证数组中
             case 'in' :
-                if(empty($v['checked_data']) || !is_array($v['checked_data']))
+                if(empty($v['checked_data']))
                 {
-                    return '内部调用参数配置有误';
+                    return '指定校验数据为空['.$v['key_name'].']';
+                }
+                if(!is_array($v['checked_data']))
+                {
+                    return '内部调用参数配置有误['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]) || !in_array($data[$v['key_name']], $v['checked_data']))
                 {
@@ -2635,11 +2673,11 @@ function ParamsChecked($data, $params)
             case 'length' :
                 if(!isset($v['checked_data']))
                 {
-                    return '长度规则值未定义';
+                    return '长度规则值未定义['.$v['key_name'].']';
                 }
                 if(!is_string($v['checked_data']))
                 {
-                    return '内部调用参数配置有误';
+                    return '内部调用参数配置有误['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]))
                 {
@@ -2670,7 +2708,7 @@ function ParamsChecked($data, $params)
             case 'fun' :
                 if(empty($v['checked_data']) || !function_exists($v['checked_data']))
                 {
-                    return '验证函数为空或函数未定义';
+                    return '验证函数为空或函数未定义['.$v['key_name'].']';
                 }
                 $fun = $v['checked_data'];
                 if(!isset($data[$v['key_name']]) || !$fun($data[$v['key_name']]))
@@ -2683,7 +2721,7 @@ function ParamsChecked($data, $params)
             case 'min' :
                 if(!isset($v['checked_data']))
                 {
-                    return '验证最小值未定义';
+                    return '验证最小值未定义['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]) || $data[$v['key_name']] < $v['checked_data'])
                 {
@@ -2695,7 +2733,7 @@ function ParamsChecked($data, $params)
             case 'max' :
                 if(!isset($v['checked_data']))
                 {
-                    return '验证最大值未定义';
+                    return '验证最大值未定义['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]) || $data[$v['key_name']] > $v['checked_data'])
                 {
@@ -2707,7 +2745,7 @@ function ParamsChecked($data, $params)
             case 'eq' :
                 if(!isset($v['checked_data']))
                 {
-                    return '验证相等未定义';
+                    return '验证相等未定义['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]) || $data[$v['key_name']] == $v['checked_data'])
                 {
@@ -2719,7 +2757,7 @@ function ParamsChecked($data, $params)
             case 'neq' :
                 if(!isset($v['checked_data']))
                 {
-                    return '验证相等未定义';
+                    return '验证相等未定义['.$v['key_name'].']';
                 }
                 if(!isset($data[$v['key_name']]) || $data[$v['key_name']] != $v['checked_data'])
                 {
@@ -2731,7 +2769,7 @@ function ParamsChecked($data, $params)
             case 'unique' :
                 if(!isset($v['checked_data']))
                 {
-                    return '验证唯一表参数未定义';
+                    return '验证唯一表参数未定义['.$v['key_name'].']';
                 }
                 if(empty($data[$v['key_name']]))
                 {

@@ -17,7 +17,7 @@ ul, li, ol {list-style: none;}
 .banner-mixed{position: relative;border-top:1px solid #F5F5F5 ;border-bottom: 1px #f5f5f5 solid;overflow: hidden;}
 .banner-news-title{position: absolute;left:10px;padding-right:10px;border-right:1px solid #eee ;}
 .banner-news li,#banner-news li a{height: 30px;line-height:30px; font-size: 12px;}
-.banner-news{max-width:1200px; margin:0px auto; overflow:hidden; height:30px;width:100%; text-align:left;color:#fff;}
+.banner-news{max-width:1200px; margin:0px auto; overflow:hidden; height:30px;width:100%; text-align:left;}
 .news-category-name { line-height: 11px; max-width: 50px; }
 .banner-news li {padding:0 10px 0 80px;}
 .mod-vip{display: none;}
@@ -78,7 +78,6 @@ text-align: center;float:none}
     .floor { margin-bottom: 15px; }
     .floor .goods-list { overflow: hidden; }
     .outer-con .describe {font-size: 14px;font-weight: 600;}
-    .goods-title, .outer-con .price { font-size: 14px; }
     .floor .goods-list .goods-items { float: left; width: 25%; padding: 10px 15px; border-right: 1px solid; border-bottom: 1px solid; border-color: #eee; }
     .floor .aggregation img {position: absolute;top:auto;left:0;bottom:0;}
 
@@ -86,7 +85,7 @@ text-align: center;float:none}
     .word .outer:hover { background: #fff; color: #d2354c !important; -webkit-transition: background .2s ease-in; -moz-transition: background .2s ease-in; -ms-transition: background .2s ease-in; -o-transition: background .2s ease-in; transition: background .2s ease-in; -webkit-transition: color .2s ease-in; -moz-transition: color .2s ease-in; -ms-transition: color .2s ease-in; -o-transition: color .2s ease-in; transition: color .2s ease-in; }
     /*.goods-items:before { content: ""; position: absolute; top: 0; left: -100%; display: block; height: 100%; width: 50%; z-index: 999; background-color: rgba(255, 255, 255, 0.3); -webkit-transition: all 1s ease 0s; -moz-transition: all 1s ease 0s; -o-transition: all 1s ease 0s; transition: all 1s ease 0s; -ms-transform: skewX(-20deg); -webkit-transform: skewX(-20deg); -o-transform: skewX(-20deg); transform: skewX(-20deg); background: -webkit-linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 100%); background: -moz-linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 100%); background: -o-linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 100%); background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.4) 100%); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=transparent, endColorstr=rgba(255, 255, 255, 0.4),GradientType=0.9); }
     .goods-items:hover:before { left: 100%; }*/
-    .goods-items:hover { z-index: 99; -webkit-box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); -moz-box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); -webkit-transition: box-shadow .2s ease-in; -moz-transition: box-shadow .2s ease-in; -ms-transition: box-shadow .2s ease-in; -o-transition: box-shadow .2s ease-in; transition: box-shadow .2s ease-in; }
+    .goods-items:hover { -webkit-box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); -moz-box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); -webkit-transition: box-shadow .2s ease-in; -moz-transition: box-shadow .2s ease-in; -ms-transition: box-shadow .2s ease-in; -o-transition: box-shadow .2s ease-in; transition: box-shadow .2s ease-in; }
     .floor .aggregation img { -webkit-transition: transform .6s ease-in; -moz-transition: transform .6s ease-in; -ms-transition: transform .6s ease-in; -o-transition: transform .6s ease-in; transition: transform .6s ease-in; }
     .floor .aggregation img:hover { transform: scale(1.1); -moz-transform: scale(1.1); -webkit-transform: scale(1.1); -o-transform: scale(1.1); -ms-transform: scale(1.1); }
 }

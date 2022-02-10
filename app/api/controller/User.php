@@ -21,6 +21,7 @@ use app\service\BuyService;
 use app\service\GoodsFavorService;
 use app\service\GoodsBrowseService;
 use app\service\IntegralService;
+use app\service\AppMiniUserService;
 
 /**
  * 用户
@@ -123,25 +124,6 @@ class User extends Common
     }
 
     /**
-     * 用户-验证码显示
-     * @author  Devil
-     * @blog    http://gong.gg/
-     * @version 1.0.0
-     * @date    2021-03-04
-     * @desc    description
-     */
-    public function UserVerifyEntry()
-    {
-        $params = [
-                'width'         => 100,
-                'height'        => 28,
-                'key_prefix'    => input('type', 'user_reg'),
-            ];
-        $verify = new \base\Verify($params);
-        $verify->Entry();
-    }
-
-    /**
      * app用户手机绑定
      * @author  Devil
      * @blog    http://gong.gg/
@@ -165,6 +147,25 @@ class User extends Common
     public function AppMobileBindVerifySend()
     {
         return ApiService::ApiDataReturn(UserService::AppMobileBindVerifySend($this->data_post));
+    }
+
+    /**
+     * 用户-验证码显示
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-03-04
+     * @desc    description
+     */
+    public function UserVerifyEntry()
+    {
+        $params = [
+                'width'         => 100,
+                'height'        => 28,
+                'key_prefix'    => input('type', 'user_reg'),
+            ];
+        $verify = new \base\Verify($params);
+        $verify->Entry();
     }
 
     /**
@@ -380,7 +381,7 @@ class User extends Common
         if($result['status'] == 0)
         {
             // 先从数据库获取用户信息
-            $user = UserService::AppUserInfoHandle(null, 'baidu_openid', $result);
+            $user = UserService::AppUserInfoHandle(null, 'baidu_openid', $result['data']['openid']);
             if(!empty($user))
             {
                 // 用户状态
@@ -392,7 +393,7 @@ class User extends Common
                     $ret = DataReturn('授权登录成功', 0, $user);
                 }
             } else {
-                $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result['data']]);
+                $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result['data']['openid']]);
             }
         } else {
             $ret = DataReturn($result['msg'], -10);
@@ -485,10 +486,10 @@ class User extends Common
         if($result['status'] == 0)
         {
             // 先从数据库获取用户信息
-            $user = UserService::AppUserInfoHandle(null, 'toutiao_openid', $result);
+            $user = UserService::AppUserInfoHandle(null, 'toutiao_openid', $result['data']['openid']);
             if(empty($user))
             {
-                $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result['data']]);
+                $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result['data']['openid']]);
             } else {
                 // 用户状态
                 $ret = UserService::UserStatusCheck('id', $user['id']);
@@ -576,13 +577,13 @@ class User extends Common
         {
             // 授权
             $result = (new \base\QQ(MyC('common_app_mini_qq_appid'), MyC('common_app_mini_qq_appsecret')))->GetAuthSessionKey($this->data_post['authcode']);
-            if($result !== false)
+            if($result['status'] == 0)
             {
                 // 先从数据库获取用户信息
-                $user = UserService::AppUserInfoHandle(null, 'qq_openid', $result);
+                $user = UserService::AppUserInfoHandle(null, 'qq_openid', $result['data']['openid']);
                 if(empty($user))
                 {
-                    $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result]);
+                    $ret = DataReturn('授权登录成功', 0, ['is_user_exist'=>0, 'openid'=>$result['data']['openid']]);
                 } else {
                     // 用户状态
                     $ret = UserService::UserStatusCheck('id', $user['id']);
@@ -594,7 +595,7 @@ class User extends Common
                     }
                 }
             } else {
-                $ret = DataReturn('授权登录失败', -100);
+                $ret = DataReturn($result['msg'], -10);
             }
         } else {
             $ret = DataReturn('授权码为空', -1);
@@ -660,6 +661,62 @@ class User extends Common
             }   
         } else {
             $ret = DataReturn($ret, -1);
+        }
+        return ApiService::ApiDataReturn($ret);
+    }
+
+    
+    /**
+     * 根据token获取用户信息
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-11-15
+     * @desc    description
+     */
+    public function TokenUserinfo()
+    {
+        return ApiService::ApiDataReturn(UserService::TokenUserinfo($this->data_request));
+    }
+
+    /**
+     * 小程序用户授权
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-11-15
+     * @desc    description
+     */
+    public function AppMiniUserAuth()
+    {
+        $module = '\app\service\AppMiniUserService';
+        $action = ucfirst(APPLICATION_CLIENT_TYPE).'UserAuth';
+        if(method_exists($module, $action))
+        {
+            $ret = AppMiniUserService::$action($this->data_post);
+        } else {
+            $ret = DataReturn('方法未定义['.$action.']', -1);
+        }
+        return ApiService::ApiDataReturn($ret);
+    }
+
+    /**
+     * 小程序用户信息
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2021-11-15
+     * @desc    description
+     */
+    public function AppMiniUserInfo()
+    {
+        $module = '\app\service\AppMiniUserService';
+        $action = ucfirst(APPLICATION_CLIENT_TYPE).'UserInfo';
+        if(method_exists($module, $action))
+        {
+            $ret = AppMiniUserService::$action($this->data_post);
+        } else {
+            $ret = DataReturn('方法未定义['.$action.']', -1);
         }
         return ApiService::ApiDataReturn($ret);
     }

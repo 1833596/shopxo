@@ -85,7 +85,6 @@ class PluginsService
                 {
                     if(isset($data[$field]))
                     {
-                        $data[$field.'_old'] = $data[$field];
                         $data[$field] = ResourcesService::AttachmentPathViewHandle($data[$field]);
                     }
                 }
@@ -105,7 +104,6 @@ class PluginsService
                             {
                                 if(in_array($ext, $attachment_ext))
                                 {
-                                    $data[$k.'_old'] = $v;
                                     $data[$k] = ResourcesService::AttachmentPathViewHandle($v);
                                 }
                             }
@@ -410,7 +408,38 @@ class PluginsService
         {
             foreach($data as &$v)
             {
-                $v['data'] = self::PluginsDataHandle($v['data']);
+                $private_field = [];
+                $attachment_field = [];
+                $plugins = '\app\plugins\\'.$v['plugins'].'\service\BaseService';
+                if(class_exists($plugins))
+                {
+                    // 附件属性
+                    $attachment_field = property_exists($plugins, 'base_config_attachment_field') ? $plugins::$base_config_attachment_field : [];
+
+                    // 私有字段
+                    $private_field = property_exists($plugins, 'base_config_private_field') ? $plugins::$base_config_private_field : [];
+                }
+
+                // 处理配置数据
+                $v['data'] = self::PluginsDataHandle($v['data'], $attachment_field);
+
+                // 移除私有字段及数据
+                if(!empty($v['data']) && is_array($v['data']) && !empty($private_field) && is_array($private_field))
+                {
+                    foreach($private_field as $pv)
+                    {
+                        if(array_key_exists($pv, $v['data']))
+                        {
+                            unset($v['data'][$pv]);
+                        }
+                    }
+                }
+            }
+
+            // 是否返回插件标识为索引
+            if(!empty($params) && isset($params['is_key']) && $params['is_key'] == 1)
+            {
+                $data = array_column($data, null, 'plugins');
             }
         } else {
             $data = [];
@@ -467,7 +496,7 @@ class PluginsService
                     if(!empty($result) && isset($result['code']) && $result['code'] == 0)
                     {
                         // 处理存在更新的插件数据
-                        if(!empty($result['data']))
+                        if(!empty($result['data']) && is_array($result['data']))
                         {
                             $result['data'] = array_column($result['data'], null, 'plugins');
                         }
